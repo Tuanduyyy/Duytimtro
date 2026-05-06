@@ -7,7 +7,7 @@ let firebaseConfig: any;
 
 try {
   // @ts-ignore - This file is created by AI Studio in the local environment
-  firebaseConfig = await import('../firebase-applet-config.json').then(m => m.default);
+  firebaseConfig = await import(/* @vite-ignore */ '../firebase-applet-config.json').then(m => m.default);
 } catch (e) {
   // Fallback for production builds/external deployments where the JSON file isn't present
   firebaseConfig = {
