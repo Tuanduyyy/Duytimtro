@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "A room listing for rent",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the listing" },
+        "price": { "type": "number", "description": "Monthly rent price" },
+        "area": { "type": "number", "description": "Area in square meters" },
+        "district": { "type": "string", "enum": ["Tân Phú", "Tân Bình", "Bình Tân"], "description": "District location" },
+        "ward": { "type": "string", "description": "Ward location" },
+        "street": { "type": "string", "description": "Street name" },
+        "address": { "type": "string", "description": "Full address" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "amenities": { "type": "array", "items": { "type": "string" }, "description": "List of amenities" },
+        "images": { "type": "array", "items": { "type": "string" }, "description": "List of image URLs or Base64 strings" },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "contactPhone": { "type": "string", "description": "Contact phone number" },
+        "isFeatured": { "type": "boolean", "description": "Whether the room is featured" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["title", "price", "area", "district", "address", "contactPhone", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "customer"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "name", "role", "createdAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Message sent by a customer to inquire about a room",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "content": { "type": "string" },
+        "roomId": { "type": "string" },
+        "isRead": { "type": "boolean", "description": "Whether the message has been read by an admin" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "content", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer review/testimonial",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "content": { "type": "string" },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "avatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "content", "rating", "status", "createdAt"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Promotional banner",
+      "type": "object",
+      "properties": {
+        "imageUrl": { "type": "string" },
+        "targetUrl": { "type": "string" },
+        "title": { "type": "string" },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["imageUrl", "order", "isActive", "createdAt"]
+    },
+    "MediaLibraryItem": {
+      "title": "MediaLibraryItem",
+      "description": "Uploaded image in the library",
+      "type": "object",
+      "properties": {
+        "url": { "type": "string" },
+        "name": { "type": "string" },
+        "size": { "type": "number" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["url", "name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Collection of room listings"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/messages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "Customer inquiries"
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer reviews"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Homepage banners"
+    },
+    "/media/{mediaId}": {
+      "schema": "MediaLibraryItem",
+      "description": "Centralized media assets"
+    },
+    "/config/settings": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "hotline": { "type": "string" },
+          "zalo": { "type": "string" },
+          "fanpage": { "type": "string" },
+          "seo": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "keywords": { "type": "string" },
+              "ogImage": { "type": "string" }
+            }
+          }
+        }
+      },
+      "description": "Global application settings"
+    }
+  }
+}

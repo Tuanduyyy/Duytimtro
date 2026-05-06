@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: rooms
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required)
+    //   - price: number (required)
+    //   - area: number (required)
+    //   - district: string (required, enum: Tân Phú, Tân Bình, Bình Tân)
+    //   - ward: string (required)
+    //   - street: string (required)
+    //   - address: string (required)
+    //   - description: string (optional)
+    //   - amenities: list (optional)
+    //   - images: list (optional)
+    //   - coordinates: map (optional)
+    //   - contactPhone: string (required)
+    //   - isFeatured: bool (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: users
+    // Document ID: userId (auth.uid)
+    // Fields:
+    //   - email: string (required)
+    //   - name: string (required)
+    //   - role: string (required, enum: admin, customer)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: messages
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required)
+    //   - phone: string (required)
+    //   - email: string (optional)
+    //   - content: string (required)
+    //   - roomId: string (optional)
+    //   - isRead: bool (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.get('email', '').toLower() == "tranduongtuanduy.6a4@gmail.com".toLower() ||
+         (request.auth.token.get('email_verified', false) == true && request.auth.token.get('email', '').toLower() == "tranduongtuanduy.6a4@gmail.com".toLower()) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Test connection to Firestore
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // Rooms Collection
+    match /rooms/{roomId} {
+      // Allow public read access so everyone can browse rooms
+      allow read: if true;
+      
+      // Only admins can create, update, or delete rooms
+      allow create, update: if isAdmin() && isValidRoom(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    function isValidRoom(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 255 &&
+             data.price is number && data.price >= 0 &&
+             data.area is number && data.area > 0 &&
+             data.district in ['Tân Phú', 'Tân Bình', 'Bình Tân'] &&
+             data.ward is string &&
+             data.street is string &&
+             data.address is string && data.address.size() > 0 &&
+             data.contactPhone is string &&
+             data.status in ['available', 'unavailable'] &&
+             data.createdAt is timestamp;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Users can read their own profile, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile (with customer role by default)
+      // Admins can create any profile
+      allow create: if isAuthenticated() && (
+        (isOwner(userId) && request.resource.data.role == 'customer') || 
+        isAdmin()
+      ) && isValidUser(request.resource.data);
+
+      // Users can update their own profile (but not their role)
+      // Admins can update any profile
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && request.resource.data.role == resource.data.role) || 
+        isAdmin()
+      ) && isValidUser(request.resource.data);
+      
+      allow delete: if isAdmin();
+    }
+
+    function isValidUser(data) {
+      return data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['admin', 'customer'] &&
+             data.createdAt is timestamp;
+    }
+
+    // Messages Collection
+    match /messages/{messageId} {
+      // Only admins can read messages
+      allow read: if isAdmin();
+      
+      // Anyone can send a message (create)
+      allow create: if isValidMessage(request.resource.data);
+      
+      // Only admins can update (e.g., mark as read) or delete messages
+      allow update: if isAdmin() && isValidMessage(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    function isValidMessage(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.phone is string && data.phone.matches("^0\\d{9,10}$") &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 2000 &&
+             (!('email' in data) || data.email == null || (data.email is string && (data.email.size() == 0 || isValidEmail(data.email)))) &&
+             (!('roomId' in data) || data.roomId == null || data.roomId is string) &&
+             (!('isRead' in data) || data.isRead is bool) &&
+             (!('status' in data) || data.status in ['pending', 'processing', 'completed', 'cancelled']) &&
+             data.createdAt is timestamp;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true; // Everyone can read reviews
+      allow create: if isValidReview(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    function isValidReview(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             (!('role' in data) || data.role is string) &&
+             (!('avatar' in data) || data.avatar is string) &&
+             data.createdAt is timestamp;
+    }
+
+    // Config Collection (Settings & Amenities)
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Banners Collection
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Media Collection
+    match /media/{mediaId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
