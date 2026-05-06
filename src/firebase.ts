@@ -2,8 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// Multi-mode configuration for both AI Studio and external deployments (Vercel)
-let firebaseConfig: any = {
+// Consolidated configuration
+const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,20 +14,20 @@ let firebaseConfig: any = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// If environment variables are not set (e.g. while developing in AI Studio),
-// try to load from the generated config file.
-if (!firebaseConfig.apiKey) {
-  try {
-    // @ts-ignore - This file is created by AI Studio in the local environment
-    const configPath = '../firebase-applet-config.json';
-    firebaseConfig = await import(/* @vite-ignore */ configPath).then(m => m.default);
-  } catch (e) {
-    // Fallback failed
-  }
+// Hardcoded fallbacks if environment variables are not properly injected or contain placeholders
+if (!firebaseConfig.apiKey || !firebaseConfig.apiKey.startsWith('AIza') || firebaseConfig.apiKey.includes('VITE_FIREBASE')) {
+  firebaseConfig.projectId = "gen-lang-client-0133795823";
+  firebaseConfig.appId = "1:73964350869:web:9ada449632f7e756e11a9c";
+  firebaseConfig.apiKey = "AIzaSyAVO0mkFJocuwSXC94fBCooowCZcG2vApE";
+  firebaseConfig.authDomain = "gen-lang-client-0133795823.firebaseapp.com";
+  firebaseConfig.firestoreDatabaseId = "ai-studio-8e979eeb-230e-48f0-92d4-eee55104b335";
+  firebaseConfig.storageBucket = "gen-lang-client-0133795823.firebasestorage.app";
+  firebaseConfig.messagingSenderId = "73964350869";
+  firebaseConfig.measurementId = "";
 }
 
-if (!firebaseConfig || !firebaseConfig.apiKey) {
-  console.error("Firebase configuration is missing. If you are on Vercel, please add the VITE_FIREBASE_* environment variables to your project settings.");
+if (!firebaseConfig.apiKey) {
+  console.error("Firebase configuration missing. Please ensure project setup is complete.");
 }
 
 const app = initializeApp(firebaseConfig);
